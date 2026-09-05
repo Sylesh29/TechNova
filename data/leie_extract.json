@@ -1,0 +1,441 @@
+{
+  "schema": "actionguard.exclusionlist.v1",
+  "list_name": "HHS-OIG LEIE",
+  "list_version": "extract-2026-07-07",
+  "provenance": {
+    "upstream": "HHS Office of Inspector General, List of Excluded Individuals/Entities (LEIE)",
+    "upstream_url": "https://oig.hhs.gov/exclusions/exclusions_list.asp",
+    "captured": "2026-07-07",
+    "captured_from": "NPI extract already present in this working tree",
+    "refresh_cadence": "monthly (upstream publishes a full replacement file)"
+  },
+  "coverage_limits": [
+    "This is a 79-NPI EXTRACT, not the full LEIE (~83k records upstream).",
+    "A negative screen against this fixture means 'not in the extract', NOT 'not excluded'.",
+    "Real LEIE names are not vendored; the 5 name records are SYNTHETIC and flagged as such.",
+    "Reinstatement and waiver dates are not modelled here; upstream carries REINDATE/WAIVERDATE."
+  ],
+  "records": [
+    {
+      "identifier": "1043302250",
+      "name": "",
+      "source_row": 0
+    },
+    {
+      "identifier": "1053789057",
+      "name": "",
+      "source_row": 1
+    },
+    {
+      "identifier": "1073671517",
+      "name": "",
+      "source_row": 2
+    },
+    {
+      "identifier": "1073682936",
+      "name": "",
+      "source_row": 3
+    },
+    {
+      "identifier": "1073916631",
+      "name": "",
+      "source_row": 4
+    },
+    {
+      "identifier": "1083747869",
+      "name": "",
+      "source_row": 5
+    },
+    {
+      "identifier": "1093800195",
+      "name": "",
+      "source_row": 6
+    },
+    {
+      "identifier": "1104947944",
+      "name": "",
+      "source_row": 7
+    },
+    {
+      "identifier": "1154372779",
+      "name": "",
+      "source_row": 8
+    },
+    {
+      "identifier": "1154936953",
+      "name": "",
+      "source_row": 9
+    },
+    {
+      "identifier": "1164669479",
+      "name": "",
+      "source_row": 10
+    },
+    {
+      "identifier": "1164994307",
+      "name": "",
+      "source_row": 11
+    },
+    {
+      "identifier": "1184831752",
+      "name": "",
+      "source_row": 12
+    },
+    {
+      "identifier": "1205019767",
+      "name": "",
+      "source_row": 13
+    },
+    {
+      "identifier": "1205992989",
+      "name": "",
+      "source_row": 14
+    },
+    {
+      "identifier": "1215968847",
+      "name": "",
+      "source_row": 15
+    },
+    {
+      "identifier": "1235104571",
+      "name": "",
+      "source_row": 16
+    },
+    {
+      "identifier": "1265081772",
+      "name": "",
+      "source_row": 17
+    },
+    {
+      "identifier": "1265830335",
+      "name": "",
+      "source_row": 18
+    },
+    {
+      "identifier": "1275600959",
+      "name": "",
+      "source_row": 19
+    },
+    {
+      "identifier": "1275856452",
+      "name": "",
+      "source_row": 20
+    },
+    {
+      "identifier": "1285651638",
+      "name": "",
+      "source_row": 21
+    },
+    {
+      "identifier": "1285786608",
+      "name": "",
+      "source_row": 22
+    },
+    {
+      "identifier": "1326100199",
+      "name": "",
+      "source_row": 23
+    },
+    {
+      "identifier": "1346254653",
+      "name": "",
+      "source_row": 24
+    },
+    {
+      "identifier": "1356713226",
+      "name": "",
+      "source_row": 25
+    },
+    {
+      "identifier": "1366425233",
+      "name": "",
+      "source_row": 26
+    },
+    {
+      "identifier": "1376533083",
+      "name": "",
+      "source_row": 27
+    },
+    {
+      "identifier": "1396786695",
+      "name": "",
+      "source_row": 28
+    },
+    {
+      "identifier": "1407923568",
+      "name": "",
+      "source_row": 29
+    },
+    {
+      "identifier": "1437418506",
+      "name": "",
+      "source_row": 30
+    },
+    {
+      "identifier": "1437449139",
+      "name": "",
+      "source_row": 31
+    },
+    {
+      "identifier": "1437510278",
+      "name": "",
+      "source_row": 32
+    },
+    {
+      "identifier": "1447560867",
+      "name": "",
+      "source_row": 33
+    },
+    {
+      "identifier": "1487843231",
+      "name": "",
+      "source_row": 34
+    },
+    {
+      "identifier": "1487873519",
+      "name": "",
+      "source_row": 35
+    },
+    {
+      "identifier": "1508484726",
+      "name": "",
+      "source_row": 36
+    },
+    {
+      "identifier": "1538586631",
+      "name": "",
+      "source_row": 37
+    },
+    {
+      "identifier": "1548560683",
+      "name": "",
+      "source_row": 38
+    },
+    {
+      "identifier": "1558922021",
+      "name": "",
+      "source_row": 39
+    },
+    {
+      "identifier": "1568885168",
+      "name": "",
+      "source_row": 40
+    },
+    {
+      "identifier": "1588167472",
+      "name": "",
+      "source_row": 41
+    },
+    {
+      "identifier": "1609376698",
+      "name": "",
+      "source_row": 42
+    },
+    {
+      "identifier": "1629125307",
+      "name": "",
+      "source_row": 43
+    },
+    {
+      "identifier": "1649524182",
+      "name": "",
+      "source_row": 44
+    },
+    {
+      "identifier": "1659424224",
+      "name": "",
+      "source_row": 45
+    },
+    {
+      "identifier": "1700995859",
+      "name": "",
+      "source_row": 46
+    },
+    {
+      "identifier": "1730299652",
+      "name": "",
+      "source_row": 47
+    },
+    {
+      "identifier": "1730514555",
+      "name": "",
+      "source_row": 48
+    },
+    {
+      "identifier": "1740277672",
+      "name": "",
+      "source_row": 49
+    },
+    {
+      "identifier": "1750335329",
+      "name": "",
+      "source_row": 50
+    },
+    {
+      "identifier": "1750442018",
+      "name": "",
+      "source_row": 51
+    },
+    {
+      "identifier": "1770579518",
+      "name": "",
+      "source_row": 52
+    },
+    {
+      "identifier": "1770828741",
+      "name": "",
+      "source_row": 53
+    },
+    {
+      "identifier": "1780812768",
+      "name": "",
+      "source_row": 54
+    },
+    {
+      "identifier": "1790746733",
+      "name": "",
+      "source_row": 55
+    },
+    {
+      "identifier": "1790919140",
+      "name": "",
+      "source_row": 56
+    },
+    {
+      "identifier": "1790963460",
+      "name": "",
+      "source_row": 57
+    },
+    {
+      "identifier": "1801231436",
+      "name": "",
+      "source_row": 58
+    },
+    {
+      "identifier": "1831243807",
+      "name": "",
+      "source_row": 59
+    },
+    {
+      "identifier": "1851631543",
+      "name": "",
+      "source_row": 60
+    },
+    {
+      "identifier": "1861575805",
+      "name": "",
+      "source_row": 61
+    },
+    {
+      "identifier": "1871502146",
+      "name": "",
+      "source_row": 62
+    },
+    {
+      "identifier": "1881298065",
+      "name": "",
+      "source_row": 63
+    },
+    {
+      "identifier": "1881816031",
+      "name": "",
+      "source_row": 64
+    },
+    {
+      "identifier": "1891731758",
+      "name": "",
+      "source_row": 65
+    },
+    {
+      "identifier": "1902166028",
+      "name": "",
+      "source_row": 66
+    },
+    {
+      "identifier": "1902198435",
+      "name": "",
+      "source_row": 67
+    },
+    {
+      "identifier": "1902997513",
+      "name": "",
+      "source_row": 68
+    },
+    {
+      "identifier": "1912011800",
+      "name": "",
+      "source_row": 69
+    },
+    {
+      "identifier": "1922151851",
+      "name": "",
+      "source_row": 70
+    },
+    {
+      "identifier": "1922348218",
+      "name": "",
+      "source_row": 71
+    },
+    {
+      "identifier": "1942399753",
+      "name": "",
+      "source_row": 72
+    },
+    {
+      "identifier": "1942460860",
+      "name": "",
+      "source_row": 73
+    },
+    {
+      "identifier": "1942476080",
+      "name": "",
+      "source_row": 74
+    },
+    {
+      "identifier": "1962839795",
+      "name": "",
+      "source_row": 75
+    },
+    {
+      "identifier": "1972062586",
+      "name": "",
+      "source_row": 76
+    },
+    {
+      "identifier": "1972902351",
+      "name": "",
+      "source_row": 77
+    },
+    {
+      "identifier": "1992906937",
+      "name": "",
+      "source_row": 78
+    },
+    {
+      "identifier": "",
+      "name": "MERIDIAN HOME INFUSION SERVICES LLC",
+      "synthetic": true
+    },
+    {
+      "identifier": "",
+      "name": "ALDRIDGE, HOLLIS T",
+      "synthetic": true
+    },
+    {
+      "identifier": "",
+      "name": "OKONKWO, ADAEZE N",
+      "synthetic": true
+    },
+    {
+      "identifier": "",
+      "name": "PINEBROOK DURABLE MEDICAL EQUIPMENT INC",
+      "synthetic": true
+    },
+    {
+      "identifier": "",
+      "name": "VASQUEZ-REYNA, ESTEBAN",
+      "synthetic": true
+    }
+  ],
+  "records_sha256": "cc3089c0e16e762af96a39386eda84850209d3c866d05e3c3c7110ba39176b63"
+}

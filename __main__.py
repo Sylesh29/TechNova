@@ -1,0 +1,5 @@
+"""`python -m actionguard` runs the gated episode."""
+from .demo import main
+
+if __name__ == "__main__":
+    main()

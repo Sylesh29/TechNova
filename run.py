@@ -19,12 +19,37 @@ the path so the package imports the same way from either location.
 """
 from __future__ import annotations
 
+import importlib.util
 import pathlib
 import sys
 import unittest
 
 HERE = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent))
+
+
+def _load_package():
+    """Import this directory as `actionguard`, whatever it is called on disk.
+
+    The repository root IS the package, so the obvious approach - put the
+    parent directory on sys.path and `import actionguard` - silently depends
+    on the checkout being named `actionguard`. It is, after `git clone`; it
+    is NOT after GitHub's "Download ZIP", which unpacks to `actionguard-main`.
+    Binding the name here instead of inferring it from the folder makes the
+    package import identically from any directory name.
+    """
+    if "actionguard" in sys.modules:
+        return sys.modules["actionguard"]
+    spec = importlib.util.spec_from_file_location(
+        "actionguard", HERE / "__init__.py",
+        submodule_search_locations=[str(HERE)],
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["actionguard"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_load_package()
 
 
 def _demo() -> int:
@@ -48,8 +73,12 @@ def _eval() -> int:
 
 
 def _test() -> int:
+    # top_level_dir is HERE, not HERE.parent: tests import `actionguard.*`,
+    # which _load_package() has already bound, so discovery must not try to
+    # re-derive the package from the directory name.
+    sys.path.insert(0, str(HERE))
     suite = unittest.defaultTestLoader.discover(
-        start_dir=str(HERE / "tests"), top_level_dir=str(HERE.parent))
+        start_dir=str(HERE / "tests"), top_level_dir=str(HERE))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     return 0 if result.wasSuccessful() else 1
 

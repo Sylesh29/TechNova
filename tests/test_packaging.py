@@ -54,5 +54,36 @@ class TestNoThirdPartyDependencies(unittest.TestCase):
                          "package must stay dependency-free")
 
 
+class TestImportsFromAnyDirectoryName(unittest.TestCase):
+    """The repository root is the package, so nothing may infer the package
+    name from the folder name. `git clone` gives `actionguard`; GitHub's
+    "Download ZIP" gives `actionguard-main`. Both must work identically.
+    """
+
+    def test_runs_when_the_checkout_is_named_something_else(self):
+        import shutil
+        import subprocess
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = pathlib.Path(tmp) / "actionguard-main"
+            shutil.copytree(
+                PKG, dest,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"),
+            )
+            # `eval` rather than `test`, so this check never recurses into itself.
+            proc = subprocess.run(
+                [sys.executable, "run.py", "eval"],
+                cwd=dest, capture_output=True, text=True, timeout=120,
+            )
+        self.assertEqual(
+            proc.returncode, 0,
+            f"package failed to import from a differently-named checkout:\n"
+            f"{proc.stderr[-1500:]}",
+        )
+        self.assertIn("EVAL", proc.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

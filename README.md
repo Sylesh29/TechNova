@@ -12,7 +12,7 @@ that" has an answer that survives an audit.
 python run.py            # a gated agent episode, end to end
 python run.py redteam    # injection red team, reported per category
 python run.py eval       # eval that abstains when it cannot vouch
-python run.py test       # 57 tests
+python run.py test       # 58 tests
 python run.py all        # all of the above, in order
 ```
 
@@ -219,7 +219,7 @@ redteam.py       26-attack corpus and the two-number report
 evalharness.py   labeled cases and the abstention logic
 demo.py          the gated episode
 run.py           entry point that works from inside this directory
-tests/           57 tests, unittest, no dependencies
+tests/           58 tests, unittest, no dependencies
 reports/         generated output, regenerate with the run.py commands
 ```
 
@@ -229,9 +229,11 @@ sanctions list and it screens sanctions; point it at LEIE and it screens
 excluded providers. The control logic upstream does not change when the list
 changes — which is checkable by reading one file.
 
-Two packaging invariants are enforced by `tests/test_packaging.py` rather than
-by convention: no module here is named after a standard-library module, and the
-package imports nothing outside the standard library. The first was violated
+Three packaging invariants are enforced by `tests/test_packaging.py` rather
+than by convention: no module here is named after a standard-library module,
+the package imports nothing outside the standard library, and the whole thing
+runs from a checkout with any directory name (`git clone` gives `actionguard`;
+GitHub's "Download ZIP" gives `actionguard-main` - both must work). The first was violated
 once — `core.py` and `ledger.py` were originally `types.py` and `trace.py`,
 which is invisible from the repo root and fatal from inside this directory,
 because Python then fails importing `enum` before reaching any of this code.

@@ -58,6 +58,7 @@ class ScreenHit:
     listed_name: str | None
     list_name: str
     list_version: str
+    colliding_records: int = 1   # >1: several list records share this name
 
     def to_dict(self) -> dict:
         return {
@@ -67,6 +68,7 @@ class ScreenHit:
             "listed_name": self.listed_name,
             "list": self.list_name,
             "list_version": self.list_version,
+            "colliding_records": self.colliding_records,
         }
 
 
@@ -105,6 +107,19 @@ class NameListScreener:
         """First letter of each token, capped - cheap and recall-friendly."""
         return "".join(t[0] for t in normalized.split(" ")[:3])
 
+    def _name_hit(self, key: str, score: float) -> ScreenHit:
+        """Build a name hit for a normalized key present in the index.
+
+        Several list records can normalize to the same name. Picking `[0]`
+        silently would report whichever happened to load first; instead the
+        record that carries an identifier is preferred - it is the one a
+        reviewer can confirm against - and the collision count is reported.
+        """
+        recs = self._by_name[key]
+        rec = next((r for r in recs if (r.get("identifier") or "").strip()), recs[0])
+        return ScreenHit("name", score, rec.get("identifier") or None, rec.get("name"),
+                         self.list_name, self.list_version, colliding_records=len(recs))
+
     def __len__(self) -> int:
         return max(len(self._by_identifier), len(self._by_name))
 
@@ -129,18 +144,14 @@ class NameListScreener:
         if not key:
             return None
         if key in self._by_name:
-            rec = self._by_name[key][0]
-            return ScreenHit("name", 1.0, rec.get("identifier"), rec.get("name"),
-                             self.list_name, self.list_version)
+            return self._name_hit(key, 1.0)
         best, best_score = None, 0.0
         for candidate in set(self._blocks.get(self._blocking_key(key), ())):
             score = SequenceMatcher(None, key, candidate).ratio()
             if score > best_score:
                 best, best_score = candidate, score
         if best is not None and best_score >= self.fuzzy_threshold:
-            rec = self._by_name[best][0]
-            return ScreenHit("name", best_score, rec.get("identifier"), rec.get("name"),
-                             self.list_name, self.list_version)
+            return self._name_hit(best, best_score)
         return None
 
 

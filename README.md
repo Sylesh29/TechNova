@@ -12,7 +12,7 @@ that" has an answer that survives an audit.
 python run.py            # a gated agent episode, end to end
 python run.py redteam    # injection red team, reported per category
 python run.py eval       # eval that abstains when it cannot vouch
-python run.py test       # 58 tests
+python run.py test       # 63 tests
 python run.py all        # all of the above, in order
 ```
 
@@ -80,6 +80,7 @@ below show exactly that happening.
 |---|------|---------|------------------|
 | 10 | `EXCLUSION.IDENTIFIER` | **BLOCK** | Paying a provider whose NPI is on the HHS-OIG exclusion list. Exact identifier match, so no false positives. A prohibited payment is a strict obligation — not routed for approval, refused. |
 | 11 | `EXCLUSION.NAME_FUZZY` | ESCALATE | Paying an entity whose *name* resembles a listed one with no identifier to confirm it. Similarity is not identity, so a human decides. |
+| 12 | `EXCLUSION.OBSERVED_ON_READ` | ALLOW | Nothing — an eligibility check on a listed provider is recorded and permitted. The hit is on the trace before any payment is attempted. |
 | 15 | `TARGET.NOT_ALLOWLISTED` | **BLOCK** | Acting against any host the operator did not name. Exact-or-subdomain matching; `evil-payer-portal.example.com` does not pass for `payer-portal.example.com`. |
 | 20 | `PHI.EGRESS` | **BLOCK** | Typing PHI into a destination not approved for PHI. Reports which *kinds* were found, never the values. |
 | 30 | `REPLAY.DUPLICATE` | **BLOCK** | A recorded workflow replayed into a double payment. Deterministic identity — same verb, target, claim, provider, amount — not a similarity score. |
@@ -88,7 +89,7 @@ below show exactly that happening.
 | 50 | `PARSE.LOW_CONFIDENCE` | ABSTAIN | Acting on a plan that did not parse cleanly. |
 | 51 | `PARSE.AMBIGUOUS_TARGET` | ABSTAIN | Guessing a click when the target matched more than one element. |
 | 60 | `AUTHORITY.DESTRUCTIVE` | ESCALATE | Any state-destroying verb running unattended. |
-| 61 | `AUTHORITY.FINANCIAL` | ESCALATE | Any money-moving verb above the operator's autonomous ceiling (default: 0 — nothing). |
+| 61 | `AUTHORITY.FINANCIAL` | ESCALATE | Any money-moving verb above the operator's autonomous ceiling (default: 0 — nothing). A financial verb with *no* amount (`deny_claim`, `approve_claim`) is treated as exceeding any ceiling — unknown is not free. |
 | 62 | `AUTHORITY.UNKNOWN_VERB` | ESCALATE | A verb outside the operator's inventory. The default is closed. |
 
 Only `BLOCK` is absolute. `ESCALATE` and `ABSTAIN` route to a person;
@@ -143,12 +144,12 @@ authority rule.
 
 ```
 EVAL - VOUCHED
-cases                    : 14
+cases                    : 16
 verdict accuracy         : 100.0%
 controlling-rule accuracy: 100.0%
 ```
 
-14 hand-built cases, each labeled with the intended verdict *and* the rule that
+16 hand-built cases, each labeled with the intended verdict *and* the rule that
 should control it, written before the run. This is a correctness check against
 a written policy, not a field accuracy claim, and the harness says so in its own
 output.
@@ -211,7 +212,7 @@ the fixture and are echoed into every screening hit and into the demo header.
 ```
 core.py          verdict lattice, Action, Decision, verb classes
 engine.py        precedence engine, monotonicity check, execution gate
-rules.py         the 12 rules, each a pure function of (action, context)
+rules.py         the 13 rules, each a pure function of (action, context)
 detectors.py     injection scan, unicode normalisation, PHI shapes, host matching
 screening.py     list-agnostic name/identifier screener + LEIE adapter
 ledger.py        hash-chained append-only trace
@@ -219,7 +220,7 @@ redteam.py       26-attack corpus and the two-number report
 evalharness.py   labeled cases and the abstention logic
 demo.py          the gated episode
 run.py           entry point that works from inside this directory
-tests/           58 tests, unittest, no dependencies
+tests/           63 tests, unittest, no dependencies
 reports/         generated output, regenerate with the run.py commands
 ```
 

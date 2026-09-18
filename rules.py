@@ -51,6 +51,21 @@ def rule_exclusion(action: Action, ctx: Context) -> RuleFinding | None:
     hit = ctx.exclusion_screener.screen(action.provider_npi, action.provider_name)
     if hit is None:
         return None
+    if action.is_readonly:
+        # Checking eligibility for an excluded provider is not a payment.
+        # The hit goes on the record so the later write is unsurprising, but
+        # the read itself is permitted - blocking reads would make the agent
+        # useless without making it safer.
+        return RuleFinding(
+            rule_id="EXCLUSION.OBSERVED_ON_READ",
+            verdict=Verdict.ALLOW,
+            precedence=12,
+            rationale=(
+                f"Provider matched {hit.list_name} ({hit.list_version}) by "
+                f"{hit.match_kind}; recorded, read permitted."
+            ),
+            evidence={"screen_hit": hit.to_dict(), "match_basis": hit.match_kind},
+        )
     if hit.match_kind == "identifier":
         return RuleFinding(
             rule_id="EXCLUSION.IDENTIFIER",
@@ -225,18 +240,36 @@ def rule_authority(action: Action, ctx: Context) -> RuleFinding | None:
             evidence={"verb": action.verb, "class": "destructive"},
         )
     if action.is_financial:
-        amount = action.amount_cents or 0
-        if amount > ctx.autonomous_amount_cents:
+        # A financial verb with no amount is not a free action - it is an
+        # action whose cost is unknown. `deny_claim` and `approve_claim`
+        # naturally carry no amount, and `amount or 0` would have let them
+        # run autonomously under a ceiling of 0. Unknown exceeds any ceiling.
+        if action.amount_cents is None:
             return RuleFinding(
                 rule_id="AUTHORITY.FINANCIAL",
                 verdict=Verdict.ESCALATE,
                 precedence=61,
                 rationale=(
-                    f"'{action.verb}' for {amount} cents exceeds the autonomous ceiling of "
-                    f"{ctx.autonomous_amount_cents} cents and requires human approval. "
-                    f"Routing is decided by this table, not by the model's confidence."
+                    f"'{action.verb}' moves money but carries no amount, so it cannot be "
+                    f"compared against the autonomous ceiling of "
+                    f"{ctx.autonomous_amount_cents} cents. An unknown amount is treated "
+                    f"as exceeding the ceiling and requires human approval."
                 ),
-                evidence={"verb": action.verb, "amount_cents": amount,
+                evidence={"verb": action.verb, "amount_cents": None,
+                          "ceiling_cents": ctx.autonomous_amount_cents},
+            )
+        if action.amount_cents > ctx.autonomous_amount_cents:
+            return RuleFinding(
+                rule_id="AUTHORITY.FINANCIAL",
+                verdict=Verdict.ESCALATE,
+                precedence=61,
+                rationale=(
+                    f"'{action.verb}' for {action.amount_cents} cents exceeds the "
+                    f"autonomous ceiling of {ctx.autonomous_amount_cents} cents and "
+                    f"requires human approval. Routing is decided by this table, not by "
+                    f"the model's confidence."
+                ),
+                evidence={"verb": action.verb, "amount_cents": action.amount_cents,
                           "ceiling_cents": ctx.autonomous_amount_cents},
             )
     if not (action.is_readonly or action.is_financial or action.is_destructive):
@@ -253,7 +286,7 @@ def rule_authority(action: Action, ctx: Context) -> RuleFinding | None:
     return None
 
 
-# --- 70 - target allowlist --------------------------------------------------
+# --- 15 - target allowlist --------------------------------------------------
 
 def rule_target_allowlist(action: Action, ctx: Context) -> RuleFinding | None:
     """The agent may only act against hosts the operator named."""

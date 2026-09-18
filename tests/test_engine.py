@@ -64,6 +64,18 @@ class TestExclusion(unittest.TestCase):
     def test_reads_are_not_exclusion_screened(self):
         d = self.g.decide(act(verb="read_screen", provider_npi="1043302250"), record=False)
         self.assertIs(d.verdict, Verdict.ALLOW)
+        self.assertNotIn("EXCLUSION", " ".join(f.rule_id for f in d.findings))
+
+    def test_eligibility_check_on_excluded_provider_is_recorded_not_blocked(self):
+        # verify_eligibility is a read. The hit must land in the trace so the
+        # subsequent payment attempt is unsurprising, but the read proceeds.
+        d = self.g.decide(act(verb="verify_eligibility", provider_npi="1043302250",
+                              claim_id="C"), record=False)
+        self.assertIs(d.verdict, Verdict.ALLOW)
+        self.assertEqual(d.controlling_rule, "DEFAULT.ALLOW")
+        ids = {f.rule_id for f in d.findings}
+        self.assertIn("EXCLUSION.OBSERVED_ON_READ", ids)
+        self.assertNotIn("EXCLUSION.IDENTIFIER", ids)
 
 
 class TestAuthority(unittest.TestCase):
@@ -80,6 +92,22 @@ class TestAuthority(unittest.TestCase):
         d = g.decide(act(verb="write_off", provider_npi="1999999999",
                          amount_cents=1200, claim_id="C"), record=False)
         self.assertIs(d.verdict, Verdict.ALLOW)
+
+    def test_financial_verb_with_no_amount_is_not_autonomous(self):
+        # Regression: `amount_cents or 0` let deny/approve (which carry no
+        # amount) run autonomously under a ceiling of 0. Unknown != free.
+        for verb in ("deny_claim", "approve_claim", "issue_payment"):
+            with self.subTest(verb):
+                d = self.g.decide(act(verb=verb, provider_npi="1999999999", claim_id="C"),
+                                  record=False)
+                self.assertIs(d.verdict, Verdict.ESCALATE)
+                self.assertEqual(d.controlling_rule, "AUTHORITY.FINANCIAL")
+
+    def test_missing_amount_escalates_even_under_a_nonzero_ceiling(self):
+        g = Guardrail(default_context(autonomous_amount_cents=5000))
+        d = g.decide(act(verb="write_off", provider_npi="1999999999", claim_id="C"),
+                     record=False)
+        self.assertIs(d.verdict, Verdict.ESCALATE)
 
     def test_destructive_always_escalates(self):
         d = self.g.decide(act(verb="void_claim", claim_id="C"), record=False)

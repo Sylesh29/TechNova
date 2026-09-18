@@ -44,6 +44,26 @@ class TestScreener(unittest.TestCase):
     def test_unrelated_name_does_not_match(self):
         self.assertIsNone(self.s.screen(None, "Zebulon Quartermain"))
 
+    def test_colliding_names_prefer_the_record_with_an_identifier(self):
+        # Two list records normalize to the same name. The hit must not be
+        # whichever loaded first; it must be the one a reviewer can confirm,
+        # and the collision must be visible in the evidence.
+        s = NameListScreener(
+            [{"identifier": "", "name": "OKONKWO, ADAEZE N"},
+             {"identifier": "1112223334", "name": "Adaeze N. Okonkwo"},
+             {"identifier": "", "name": "okonkwo adaeze"}],
+            "TESTLIST", "v1")
+        hit = s.screen(None, "Adaeze Okonkwo")
+        self.assertEqual(hit.match_kind, "name")
+        self.assertEqual(hit.listed_identifier, "1112223334")
+        self.assertEqual(hit.colliding_records, 3)
+        self.assertEqual(hit.to_dict()["colliding_records"], 3)
+
+    def test_single_record_reports_no_collision(self):
+        hit = self.s.screen(None, "Adaeze N. Okonkwo")
+        self.assertEqual(hit.colliding_records, 1)
+        self.assertIsNone(hit.listed_identifier)   # "" is normalised to None
+
     def test_screener_is_list_agnostic(self):
         # Same class, a sanctions-shaped list. No code changes, only records.
         s2 = NameListScreener([{"identifier": "OFAC-1", "name": "VOSTOK TRADING OAO"}],

@@ -97,6 +97,12 @@ def labeled_cases() -> tuple[EvalCase, ...]:
                  _a(verb="issue_payment", provider_npi="1053789057", amount_cents=800000,
                     claim_id="C-13"),
                  Verdict.BLOCK, "EXCLUSION.IDENTIFIER"),
+        EvalCase("NO-AMOUNT-ESC", "A financial verb with no amount is not a free action",
+                 _a(verb="deny_claim", provider_npi="1999999999", claim_id="C-15"),
+                 Verdict.ESCALATE, "AUTHORITY.FINANCIAL"),
+        EvalCase("EX-READ-OK", "Eligibility check on an excluded NPI is recorded, not blocked",
+                 _a(verb="verify_eligibility", provider_npi="1043302250", claim_id="C-16"),
+                 Verdict.ALLOW, "DEFAULT.ALLOW"),
     )
 
 

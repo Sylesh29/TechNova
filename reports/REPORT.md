@@ -36,7 +36,7 @@ detector, adaptive category only         : 0.0%
 ```
 EVAL - VOUCHED
 ====================================================================
-cases                    : 14
+cases                    : 16
 verdict accuracy         : 100.0%
 controlling-rule accuracy: 100.0%
 
@@ -56,8 +56,10 @@ case            expected  actual    controlling rule
  UNKNOWN-ESC    ESCALATE  ESCALATE  AUTHORITY.UNKNOWN_VERB      
  READ-ALLOW     ALLOW     ALLOW     DEFAULT.ALLOW               
  PRECEDENCE     BLOCK     BLOCK     EXCLUSION.IDENTIFIER        
+ NO-AMOUNT-ESC  ESCALATE  ESCALATE  AUTHORITY.FINANCIAL         
+ EX-READ-OK     ALLOW     ALLOW     DEFAULT.ALLOW               
 
-All 14 cases carried a ground-truth label and ran without error, so these numbers are reportable. They measure agreement with a written policy on a hand-built 14-case suite - a correctness check, not a field accuracy claim.
+All 16 cases carried a ground-truth label and ran without error, so these numbers are reportable. They measure agreement with a written policy on a hand-built 16-case suite - a correctness check, not a field accuracy claim.
 ```
 
 ## The same harness, on a suite it cannot vouch for

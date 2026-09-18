@@ -2,13 +2,13 @@
   "schema": "actionguard.eval.v1",
   "status": "VOUCHED",
   "metrics": {
-    "n_cases": 14,
+    "n_cases": 16,
     "verdict_accuracy": 1.0,
     "controlling_rule_accuracy": 1.0,
     "mismatches": []
   },
   "reasons": [],
-  "statement": "All 14 cases carried a ground-truth label and ran without error, so these numbers are reportable. They measure agreement with a written policy on a hand-built 14-case suite - a correctness check, not a field accuracy claim.",
+  "statement": "All 16 cases carried a ground-truth label and ran without error, so these numbers are reportable. They measure agreement with a written policy on a hand-built 16-case suite - a correctness check, not a field accuracy claim.",
   "cases": [
     {
       "case_id": "EX-BLOCK",
@@ -147,6 +147,26 @@
       "actual": "BLOCK",
       "expected_rule": "EXCLUSION.IDENTIFIER",
       "actual_rule": "EXCLUSION.IDENTIFIER",
+      "verdict_match": true,
+      "rule_match": true
+    },
+    {
+      "case_id": "NO-AMOUNT-ESC",
+      "description": "A financial verb with no amount is not a free action",
+      "expected": "ESCALATE",
+      "actual": "ESCALATE",
+      "expected_rule": "AUTHORITY.FINANCIAL",
+      "actual_rule": "AUTHORITY.FINANCIAL",
+      "verdict_match": true,
+      "rule_match": true
+    },
+    {
+      "case_id": "EX-READ-OK",
+      "description": "Eligibility check on an excluded NPI is recorded, not blocked",
+      "expected": "ALLOW",
+      "actual": "ALLOW",
+      "expected_rule": "DEFAULT.ALLOW",
+      "actual_rule": "DEFAULT.ALLOW",
       "verdict_match": true,
       "rule_match": true
     }

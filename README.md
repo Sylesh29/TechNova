@@ -12,7 +12,7 @@ that" has an answer that survives an audit.
 python run.py            # a gated agent episode, end to end
 python run.py redteam    # injection red team, reported per category
 python run.py eval       # eval that abstains when it cannot vouch
-python run.py test       # 81 tests
+python run.py test       # 83 tests
 python run.py report     # rewrite reports/ from the current code
 python run.py all        # demo, redteam, eval, test - in order
 ```
@@ -225,6 +225,16 @@ The demo edits one recorded `BLOCK` to `ALLOW` after the fact and re-verifies �
 the chain breaks, and reports *which* sequence number was altered. Detected and
 localised, not merely detected.
 
+**You can do that yourself in a browser.** `python run.py report` writes
+`reports/viewer.html`: every decision from all three sessions, the role each
+was handed to, and the chain — re-verified by the page's own SHA-256, not by
+trusting the file's `chain_intact` flag. Flip any verdict in a dropdown and the
+chain breaks at that entry. It opens from disk with no server; the data is
+inlined. The canonical JSON the ledger hashes is defined so that a verifier in
+another language gets the same bytes (integral floats serialise as integers,
+keys sorted, ASCII-escaped) — the browser and Python agree on every digest, and
+a test pins the canonical form.
+
 ---
 
 ## What this does **not** solve
@@ -272,8 +282,9 @@ redteam.py       26-attack corpus and the two-number report
 evalharness.py   labeled cases and the abstention logic
 demo.py          two gated episodes: a claims queue, and payment posting across sessions
 run.py           entry point that works from inside this directory
-tests/           81 tests, unittest, no dependencies
-reports/         generated output; `python run.py report` rewrites it
+tests/           83 tests, unittest, no dependencies
+reports/         generated output incl. viewer.html; `python run.py report` rewrites it
+viewer_template.html  the trace viewer; report inlines the data into it
 ```
 
 `screening.py` has no healthcare in it. It normalises names, builds an exact

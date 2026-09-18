@@ -182,6 +182,23 @@ class TestTrace(unittest.TestCase):
         t.append({"a": 1})
         self.assertEqual(load_and_verify(t.to_json()), (True, None))
 
+    def test_canonical_form_is_what_a_javascript_verifier_would_produce(self):
+        # Python writes 1.0, JSON.stringify writes 1. The hashed bytes must be
+        # the same from either, or the browser viewer cannot verify the chain.
+        from actionguard.ledger import canonical_json
+        body = {"z": [1.0, 0.9231, 2], "a": {"score": 1.0, "n": None, "s": "café"}}
+        self.assertEqual(canonical_json(body),
+                         '{"a":{"n":null,"s":"caf\\u00e9","score":1},"z":[1,0.9231,2]}')
+
+    def test_demo_trace_builds_and_verifies(self):
+        from actionguard.demo import build_trace
+        t = build_trace()
+        self.assertEqual(t["ledger"]["chain_intact"], True)
+        self.assertEqual(load_and_verify(json.dumps(t["ledger"])), (True, None))
+        self.assertEqual(len(t["episodes"]), 3)
+        # deterministic: two builds are byte-identical, so reports/ never drifts
+        self.assertEqual(json.dumps(t, sort_keys=True), json.dumps(build_trace(), sort_keys=True))
+
 
 class TestEvalHarness(unittest.TestCase):
     def test_fully_labeled_run_is_vouched_and_reports_a_metric(self):

@@ -17,6 +17,26 @@ from typing import Any, Iterator, Sequence
 GENESIS = "0" * 64
 
 
+def _normalize(obj: Any) -> Any:
+    """Integral floats become ints so the canonical form is the same bytes
+    from any JSON serializer. Python writes `1.0`; JavaScript writes `1`.
+    A verifier written in another language must get the same digest, or
+    the chain is only checkable by the code that wrote it."""
+    if isinstance(obj, float) and obj.is_integer():
+        return int(obj)
+    if isinstance(obj, dict):
+        return {k: _normalize(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_normalize(v) for v in obj]
+    return obj
+
+
+def canonical_json(body: dict[str, Any]) -> str:
+    """The exact bytes that are hashed: sorted keys, no whitespace, ASCII."""
+    return json.dumps(_normalize(body), sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=True)
+
+
 def _digest(payload: str, prev_hash: str) -> str:
     return hashlib.sha256(f"{prev_hash}{payload}".encode("utf-8")).hexdigest()
 
@@ -59,7 +79,7 @@ class TraceLedger:
 
     def append(self, body: dict[str, Any]) -> TraceEntry:
         prev = self.head
-        payload = json.dumps(body, sort_keys=True, separators=(",", ":"))
+        payload = canonical_json(body)
         entry = TraceEntry(
             seq=len(self._entries),
             recorded_at=self._clock(),
@@ -74,7 +94,7 @@ class TraceLedger:
         """Return (intact, first_broken_seq). Recomputes the whole chain."""
         prev = GENESIS
         for entry in self._entries:
-            payload = json.dumps(entry.body, sort_keys=True, separators=(",", ":"))
+            payload = canonical_json(entry.body)
             if entry.prev_hash != prev or entry.entry_hash != _digest(payload, prev):
                 return False, entry.seq
             prev = entry.entry_hash
@@ -99,7 +119,7 @@ def load_and_verify(blob: str) -> tuple[bool, int | None]:
     data = json.loads(blob)
     prev = GENESIS
     for raw in data.get("entries", []):
-        payload = json.dumps(raw["body"], sort_keys=True, separators=(",", ":"))
+        payload = canonical_json(raw["body"])
         if raw["prev_hash"] != prev or raw["entry_hash"] != _digest(payload, prev):
             return False, raw["seq"]
         prev = raw["entry_hash"]

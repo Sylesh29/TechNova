@@ -127,6 +127,54 @@ def posting_episode(session: str) -> list[Action]:
     ]
 
 
+def build_trace() -> dict:
+    """Run both episodes silently into ONE ledger and return it for export.
+
+    This is what `run.py report` writes to reports/trace.json and what the
+    viewer renders. The clock is synthetic and monotone so the file is
+    byte-identical run to run; the viewer labels it as a demo clock.
+    """
+    from datetime import datetime, timedelta, timezone
+    from .ledger import TraceLedger
+
+    t0 = datetime(2026, 9, 18, 9, 0, 0, tzinfo=timezone.utc)
+    ticks = iter(range(10_000))
+    clock = lambda: (t0 + timedelta(seconds=next(ticks) * 7)).isoformat()   # noqa: E731
+    ledger = TraceLedger(clock=clock)
+
+    sessions = [("ep-2026-09-04-001", "Claims queue", episode(), 0)]
+    guard = Guardrail(default_context(), ledger=ledger, clock=clock)
+    for a in episode():
+        guard.execute(a, lambda x: None)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store_path = Path(tmp) / "replay.jsonl"
+        for session in ("day1", "day2"):
+            ctx = default_context(autonomous_amount_cents=50000,
+                                  seen_fingerprints=JsonlReplayStore(store_path))
+            g = Guardrail(ctx, ledger=ledger, clock=clock)
+            sessions.append((f"posting-{session}", f"Payment posting, {session}",
+                             posting_episode(session), 50000))
+            for a in posting_episode(session):
+                g.execute(a, lambda x: None)
+
+    meta = load_fixture_meta()
+    return {
+        "schema": "actionguard.trace.v1",
+        "generated_by": "python run.py report",
+        "clock": "synthetic, monotone - a demo clock, not wall time",
+        "exclusion_list": {"name": meta["list_name"], "version": meta["list_version"],
+                           "records_sha256": meta["records_sha256"],
+                           "coverage_limits": meta["coverage_limits"]},
+        "episodes": [
+            {"episode_id": eid, "label": label, "proposed": len(acts),
+             "autonomous_ceiling_cents": ceiling}
+            for eid, label, acts, ceiling in sessions
+        ],
+        "ledger": ledger.export(),
+    }
+
+
 def _rule(width: int = W) -> str:
     return "-" * width
 
@@ -242,7 +290,7 @@ def main() -> None:
     print("=" * W)
     print("Next:  python run.py redteam    injection red team, per category")
     print("       python run.py eval       eval that abstains when it cannot vouch")
-    print("       python run.py test       81 tests, no dependencies")
+    print("       python run.py test       83 tests, no dependencies")
     print("=" * W)
 
 

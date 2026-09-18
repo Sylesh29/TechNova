@@ -85,6 +85,19 @@ def _report() -> int:
     abstained = ev.run(ev.unlabeled_cases())
     (out / "redteam.json").write_text(json.dumps(rt, indent=2), encoding="utf-8")
     (out / "eval.json").write_text(json.dumps(vouched, indent=2), encoding="utf-8")
+
+    # The trace, and a viewer with the data inlined so it opens from file://
+    # with no server and re-verifies the chain in the browser.
+    from actionguard.demo import build_trace
+    trace = build_trace()
+    (out / "trace.json").write_text(json.dumps(trace, indent=2), encoding="utf-8")
+    template = (HERE / "viewer_template.html").read_text(encoding="utf-8")
+    data = json.dumps({"trace": trace, "redteam": rt, "eval": vouched,
+                       "eval_abstained": abstained},
+                      separators=(",", ":")).replace("</", "<\\/")
+    marker = "/*__DATA__*/null"
+    assert marker in template, "viewer_template.html lost its data marker"
+    (out / "viewer.html").write_text(template.replace(marker, data), encoding="utf-8")
     (out / "REPORT.md").write_text(
         "# Measured results\n\n"
         "Every number below was produced by running the code in this\n"
@@ -97,7 +110,7 @@ def _report() -> int:
         f"```\n{ev.format_report(abstained)}\n```\n",
         encoding="utf-8",
     )
-    print(f"wrote {out / 'REPORT.md'}, redteam.json, eval.json")
+    print(f"wrote {out}: REPORT.md, redteam.json, eval.json, trace.json, viewer.html")
     return 0
 
 

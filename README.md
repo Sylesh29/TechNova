@@ -12,7 +12,7 @@ that" has an answer that survives an audit.
 python run.py            # a gated agent episode, end to end
 python run.py redteam    # injection red team, reported per category
 python run.py eval       # eval that abstains when it cannot vouch
-python run.py test       # 63 tests
+python run.py test       # 80 tests
 python run.py all        # all of the above, in order
 ```
 
@@ -91,9 +91,29 @@ below show exactly that happening.
 | 60 | `AUTHORITY.DESTRUCTIVE` | ESCALATE | Any state-destroying verb running unattended. |
 | 61 | `AUTHORITY.FINANCIAL` | ESCALATE | Any money-moving verb above the operator's autonomous ceiling (default: 0 — nothing). A financial verb with *no* amount (`deny_claim`, `approve_claim`) is treated as exceeding any ceiling — unknown is not free. |
 | 62 | `AUTHORITY.UNKNOWN_VERB` | ESCALATE | A verb outside the operator's inventory. The default is closed. |
+| 63 | `AUTHORITY.ADMINISTRATIVE` | ESCALATE | A non-financial write (prior auth, appeal, note) when the operator has switched `administrative_autonomous` off. On by default: these are the bulk of the work and do not move money. |
 
 Only `BLOCK` is absolute. `ESCALATE` and `ABSTAIN` route to a person;
 `Verdict.human_can_override` encodes the difference.
+
+**The person has a name.** Every `ESCALATE` or `ABSTAIN` carries `handoff_to`:
+the role the operator mapped to the controlling rule (`Context.escalation_owners`),
+falling back to `default_owner`. A payment over the ceiling goes to the *cash
+posting manager*; a quarantined write goes to the *security reviewer*; an
+ambiguous click goes to the *automation operator*. The trace records the role,
+so "who was supposed to look at this" is answered by the record, not by a
+Slack search. `BLOCK` is handed to no one — it is refused, not reviewed.
+
+**Verb inventory.** Four classes, disjoint, checked by a test:
+
+| Class | Examples | Default authority |
+|---|---|---|
+| financial | `post_payment`, `apply_adjustment`, `issue_payment`, `write_off`, `deny_claim` | ESCALATE above the ceiling; an unknown amount always escalates |
+| destructive | `void_claim`, `delete_record`, `purge_document` | always ESCALATE |
+| administrative | `submit_prior_auth`, `file_appeal`, `request_records`, `route_exception`, `add_note` | ALLOW (operator can flip to ESCALATE) — still subject to allowlist, PHI, injection and replay |
+| readonly | `pull_remittance`, `check_claim_status`, `verify_benefits`, `read_screen` | ALLOW |
+
+Anything else is `AUTHORITY.UNKNOWN_VERB`.
 
 ---
 
@@ -144,12 +164,12 @@ authority rule.
 
 ```
 EVAL - VOUCHED
-cases                    : 16
+cases                    : 19
 verdict accuracy         : 100.0%
 controlling-rule accuracy: 100.0%
 ```
 
-16 hand-built cases, each labeled with the intended verdict *and* the rule that
+19 hand-built cases, each labeled with the intended verdict *and* the rule that
 should control it, written before the run. This is a correctness check against
 a written policy, not a field accuracy claim, and the harness says so in its own
 output.
@@ -168,6 +188,29 @@ Unlabeled, errored or duplicated cases all trigger it. An eval that produces a
 number over cases it cannot vouch for is describing the harness, not the system.
 The same discipline the guardrail applies to the agent, applied to the
 measurement.
+
+### Payment posting across sessions
+
+`python run.py` also runs a payment-posting queue twice — pull the ERA, check
+status, post, adjust, route the exception — with a fresh `Guardrail` and a fresh
+store *object* each time, sharing only a JSONL file on disk. Day one posts the
+routine line and routes the exception; day two finds both already on disk and
+blocks them as `REPLAY.DUPLICATE`, naming the episode they first ran in. The
+large post escalates to the cash posting manager both days; the takeback for an
+excluded NPI blocks both days; the line annotated by a hostile spreadsheet macro
+abstains both days.
+
+```
+ session day2  (store has 2 prior write(s) on disk)
+    3. BLOCK     post_payment       -> REPLAY.DUPLICATE
+              Identical post_payment for claim C-7001 already executed at step
+              3 in episode posting-day1. ...
+    4. ESCALATE  post_payment       -> AUTHORITY.FINANCIAL   [handed to: cash posting manager]
+```
+
+`JsonlReplayStore` is append-only, flushed and fsynced per write, and reloads
+with first-record-wins so a reloaded store answers identically to the one that
+wrote it. A blocked write is never persisted.
 
 ### Audit trace
 
@@ -190,7 +233,7 @@ Stated plainly, because a control register without a gaps table is marketing.
 | **Entity resolution is names and NPIs only** | No address, DOB, or corporate-affiliation matching. An excluded individual billing under a new entity's NPI is not caught. |
 | **Fuzzy threshold is unvalidated** | 0.90 on `SequenceMatcher` was chosen, not tuned. No labeled name-matching set exists here, so no precision/recall number is claimed for it. |
 | **PHI detection is pattern-based** | Catches SSN, MRN, member-ID and DOB shapes. Free-text PHI in a narrative note is not caught. |
-| **Replay window is per-episode, in memory** | A durable cross-session store is needed before this stops double-payment across runs. |
+| **Replay store is a local file** | `JsonlReplayStore` survives the process and is shared across sessions on one host. Two hosts posting the same ERA concurrently need a store with a real uniqueness constraint (a database), not a file. |
 | **No integration with a real agent runtime** | The gate is `Guardrail.execute`; wiring it to an actual computer-use loop is the next piece of work, not something this package does. |
 | **Trace is not externally anchored** | Hash-chaining detects edits to the chain. It does not stop someone who can rewrite the whole file from producing a self-consistent one. Anchoring the head off-box closes that. |
 
@@ -212,15 +255,16 @@ the fixture and are echoed into every screening hit and into the demo header.
 ```
 core.py          verdict lattice, Action, Decision, verb classes
 engine.py        precedence engine, monotonicity check, execution gate
-rules.py         the 13 rules, each a pure function of (action, context)
+rules.py         the 14 rules, each a pure function of (action, context)
 detectors.py     injection scan, unicode normalisation, PHI shapes, host matching
 screening.py     list-agnostic name/identifier screener + LEIE adapter
 ledger.py        hash-chained append-only trace
+replay.py        replay store interface + append-only JSONL implementation
 redteam.py       26-attack corpus and the two-number report
 evalharness.py   labeled cases and the abstention logic
-demo.py          the gated episode
+demo.py          two gated episodes: a claims queue, and payment posting across sessions
 run.py           entry point that works from inside this directory
-tests/           63 tests, unittest, no dependencies
+tests/           80 tests, unittest, no dependencies
 reports/         generated output, regenerate with the run.py commands
 ```
 

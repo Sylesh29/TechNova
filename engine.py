@@ -79,13 +79,19 @@ class Guardrail:
     def decide(self, action: Action, record: bool = True) -> Decision:
         findings = self._findings(action)
         controlling = self._resolve(findings)
+        decided_at = self._clock()
+        # ESCALATE and ABSTAIN go to a named role. BLOCK goes to no one - it
+        # is refused, not reviewed - and ALLOW needs no one.
+        handoff = (self.context.owner_for(controlling.rule_id)
+                   if controlling.verdict.human_can_override else None)
         decision = Decision(
             action=action,
             verdict=controlling.verdict,
             controlling_rule=controlling.rule_id,
             rationale=controlling.rationale,
             findings=tuple(findings),
-            decided_at=self._clock(),
+            decided_at=decided_at,
+            handoff_to=handoff,
         )
         if record:
             self.ledger.append({
@@ -95,6 +101,7 @@ class Guardrail:
                 "verdict": decision.verdict.name,
                 "controlling_rule": decision.controlling_rule,
                 "rationale": decision.rationale,
+                "handoff_to": decision.handoff_to,
                 "action_fingerprint": action.fingerprint(),
                 "verb": action.verb,
                 "target": action.target,
@@ -104,8 +111,12 @@ class Guardrail:
             # Only executed writes count as "seen" for replay purposes. An
             # action that was blocked never happened, so it must not poison
             # a later legitimate retry.
-            if decision.may_execute and (action.is_financial or action.is_destructive):
-                self.context.seen_fingerprints.setdefault(action.fingerprint(), action.step)
+            if decision.may_execute and action.is_write:
+                self.context.seen_fingerprints.setdefault(action.fingerprint(), {
+                    "step": action.step,
+                    "episode_id": action.episode_id,
+                    "recorded_at": decided_at,
+                })
         return decision
 
     def execute(self, action: Action, executor) -> tuple[Decision, object]:
@@ -167,6 +178,18 @@ def default_context(**overrides) -> Context:
         allowed_hosts=("payer-portal.example.com", "clearinghouse.example.net"),
         phi_allowed_hosts=("payer-portal.example.com",),
         autonomous_amount_cents=0,
+        # Roles, not people. These are the owners a revenue-cycle operation
+        # already has; the trace names the one that should see this case.
+        escalation_owners={
+            "EXCLUSION.NAME_FUZZY": "compliance officer",
+            "AUTHORITY.FINANCIAL": "cash posting manager",
+            "AUTHORITY.DESTRUCTIVE": "revenue cycle operations lead",
+            "AUTHORITY.ADMINISTRATIVE": "patient access supervisor",
+            "AUTHORITY.UNKNOWN_VERB": "revenue cycle operations lead",
+            "INJECTION.QUARANTINE": "security reviewer",
+            "PARSE.LOW_CONFIDENCE": "automation operator",
+            "PARSE.AMBIGUOUS_TARGET": "automation operator",
+        },
     )
     base.update(overrides)
     return Context(**base)

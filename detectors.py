@@ -100,7 +100,7 @@ _PATTERNS: Sequence[tuple[str, str, re.Pattern[str]]] = (
     ("TOOL_INVOCATION", "tool_call",
      re.compile(r"<(tool_use|function_call|invoke)\b|\b(call|invoke|execute)\s+(the\s+)?(function|tool|api)\b", re.I)),
     ("TOOL_INVOCATION", "verb_call_syntax",
-     re.compile(r"\b(submit_claim|approve_claim|issue_payment|adjust_claim|delete_record)\s*\(", re.I)),
+     re.compile(r"\b(submit_claim|approve_claim|issue_payment|adjust_claim|post_payment|apply_adjustment|delete_record)\s*\(", re.I)),
     ("AUTHORITY_SPOOF", "pre_approved",
      re.compile(r"\b(pre[-\s]?approved|already\s+approved|auto[-\s]?approve|approved\s+by\s+(compliance|legal|the\s+payer|supervisor))\b", re.I)),
     ("AUTHORITY_SPOOF", "bypass_review",

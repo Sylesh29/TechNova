@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Mapping
 
 from .detectors import host_allowed, scan_injection, scan_phi
+from .replay import ReplayStore
 from .screening import NameListScreener
 from .core import Action, RuleFinding, Surface, Verdict
 
@@ -27,8 +28,18 @@ class Context:
     allowed_hosts: tuple[str, ...] = ()
     phi_allowed_hosts: tuple[str, ...] = ()
     autonomous_amount_cents: int = 0      # 0 = no financial action is ever autonomous
-    seen_fingerprints: dict[str, int] = field(default_factory=dict)
+    administrative_autonomous: bool = True  # non-financial writes run unattended
+    seen_fingerprints: ReplayStore = field(default_factory=dict)
     fuzzy_name_escalates: bool = True     # name-only hits escalate; ID hits block
+    # Who a non-autonomous decision is handed to, by rule id. A finding whose
+    # rule is not listed goes to `default_owner`. The point is that the trace
+    # names a role, not "a human": their site says "escalation to named
+    # experts", and this is where the name comes from.
+    escalation_owners: Mapping[str, str] = field(default_factory=dict)
+    default_owner: str = "revenue cycle operations lead"
+
+    def owner_for(self, rule_id: str) -> str:
+        return self.escalation_owners.get(rule_id, self.default_owner)
 
 
 Rule = Callable[[Action, Context], "RuleFinding | None"]
@@ -124,23 +135,28 @@ def rule_replay(action: Action, ctx: Context) -> RuleFinding | None:
 
     Deterministic identity, not a similarity score: same verb, target, claim,
     provider and amount is the same action, and the second one is a duplicate.
+    The store may be durable, in which case the first execution can be from
+    an earlier session - the rationale says which.
     """
-    if not (action.is_financial or action.is_destructive):
+    if not action.is_write:
         return None
     fp = action.fingerprint()
     prior = ctx.seen_fingerprints.get(fp)
     if prior is None:
         return None
+    where = ("in this episode" if prior.get("episode_id") == action.episode_id
+             else f"in episode {prior.get('episode_id')}")
+    twice = "pay twice" if action.is_financial else "write the same thing twice"
     return RuleFinding(
         rule_id="REPLAY.DUPLICATE",
         verdict=Verdict.BLOCK,
         precedence=30,
         rationale=(
             f"Identical {action.verb} for claim {action.claim_id} already executed at "
-            f"step {prior} in this episode. A replayed write is blocked; re-running a "
-            f"recorded workflow must not be able to pay twice."
+            f"step {prior.get('step')} {where}. A replayed write is blocked; re-running "
+            f"a recorded workflow must not be able to {twice}."
         ),
-        evidence={"fingerprint": fp, "first_seen_step": prior},
+        evidence={"fingerprint": fp, "first_seen": dict(prior)},
     )
 
 
@@ -272,7 +288,18 @@ def rule_authority(action: Action, ctx: Context) -> RuleFinding | None:
                 evidence={"verb": action.verb, "amount_cents": action.amount_cents,
                           "ceiling_cents": ctx.autonomous_amount_cents},
             )
-    if not (action.is_readonly or action.is_financial or action.is_destructive):
+    if action.is_administrative and not ctx.administrative_autonomous:
+        return RuleFinding(
+            rule_id="AUTHORITY.ADMINISTRATIVE",
+            verdict=Verdict.ESCALATE,
+            precedence=63,
+            rationale=(
+                f"'{action.verb}' writes to a payer or provider system and the operator "
+                f"has not permitted administrative writes to run unattended."
+            ),
+            evidence={"verb": action.verb, "class": "administrative"},
+        )
+    if not (action.is_readonly or action.is_write):
         return RuleFinding(
             rule_id="AUTHORITY.UNKNOWN_VERB",
             verdict=Verdict.ESCALATE,

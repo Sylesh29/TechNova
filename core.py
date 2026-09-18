@@ -51,18 +51,35 @@ class Surface(IntEnum):
     UNTRUSTED = 2   # read from a portal, document, note, email - hostile
 
 
-# Verbs that move money, change a record of account, or destroy state.
-# Membership here is a policy decision, not a model judgement.
+# Verb classes. Membership here is a policy decision, not a model judgement.
+# The inventory follows the revenue-cycle and patient-access workflows an
+# agent is actually pointed at: claims, payment posting, prior auth, denials
+# and appeals, A/R follow-up, benefits verification, records requests.
+
+# Move money or change a record of account.
 FINANCIAL_VERBS = frozenset({
     "submit_claim", "adjust_claim", "deny_claim", "approve_claim",
     "issue_payment", "post_adjustment", "write_off", "refund",
+    # payment posting: apply a remittance line to a patient account
+    "post_payment", "apply_adjustment", "post_denial", "transfer_balance",
 })
+# Destroy state.
 DESTRUCTIVE_VERBS = frozenset({
     "delete_record", "void_claim", "purge_document", "close_account",
 })
+# Write to a payer or provider system without moving money. Autonomous by
+# default because they are the bulk of the work (a status note, a prior-auth
+# submission); still subject to allowlist, PHI, injection and replay rules,
+# and the operator can switch them to escalate with one flag.
+ADMINISTRATIVE_VERBS = frozenset({
+    "submit_prior_auth", "file_appeal", "request_records", "add_note",
+    "update_claim_status", "flag_underpayment", "route_exception",
+})
+# Observe only.
 READONLY_VERBS = frozenset({
     "read_screen", "search_member", "open_claim", "verify_eligibility",
-    "download_document", "screenshot",
+    "verify_benefits", "check_claim_status", "download_document",
+    "pull_remittance", "screenshot",
 })
 
 
@@ -98,8 +115,17 @@ class Action:
         return self.verb in DESTRUCTIVE_VERBS
 
     @property
+    def is_administrative(self) -> bool:
+        return self.verb in ADMINISTRATIVE_VERBS
+
+    @property
     def is_readonly(self) -> bool:
         return self.verb in READONLY_VERBS
+
+    @property
+    def is_write(self) -> bool:
+        """Any verb that changes state somewhere - the replay rule's scope."""
+        return self.is_financial or self.is_destructive or self.is_administrative
 
     def fingerprint(self) -> str:
         """Stable identity for replay detection: what, to whom, for how much."""
@@ -147,6 +173,9 @@ class Decision:
     rationale: str
     findings: Sequence[RuleFinding]
     decided_at: str
+    # The named role a non-autonomous decision is handed to. None for ALLOW
+    # and for BLOCK: a block is not handed to anyone, it is refused.
+    handoff_to: str | None = None
 
     @property
     def may_execute(self) -> bool:
@@ -157,6 +186,7 @@ class Decision:
             "verdict": self.verdict.name,
             "controlling_rule": self.controlling_rule,
             "rationale": self.rationale,
+            "handoff_to": self.handoff_to,
             "decided_at": self.decided_at,
             "action": self.action.to_dict(),
             "findings": [f.to_dict() for f in self.findings],

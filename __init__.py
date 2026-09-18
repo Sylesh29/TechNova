@@ -9,9 +9,11 @@ from .core import Action, Verdict, RuleFinding, Decision, Surface
 from .engine import Guardrail, DEFAULT_RULES, default_context
 from .rules import Context
 from .ledger import TraceLedger
+from .replay import JsonlReplayStore
 
 __version__ = "0.1.0"
 __all__ = [
     "Action", "Verdict", "RuleFinding", "Decision", "Surface",
     "Guardrail", "DEFAULT_RULES", "default_context", "Context", "TraceLedger",
+    "JsonlReplayStore",
 ]

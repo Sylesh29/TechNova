@@ -242,7 +242,7 @@ def main() -> None:
     print("=" * W)
     print("Next:  python run.py redteam    injection red team, per category")
     print("       python run.py eval       eval that abstains when it cannot vouch")
-    print("       python run.py test       80 tests, no dependencies")
+    print("       python run.py test       81 tests, no dependencies")
     print("=" * W)
 
 

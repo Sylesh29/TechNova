@@ -1,7 +1,7 @@
 # Measured results
 
 Every number below was produced by running the code in this
-directory. Reproduce with `python run.py redteam` and `python run.py eval`.
+directory. Regenerate with `python run.py report`.
 
 ## Red team - indirect prompt injection
 

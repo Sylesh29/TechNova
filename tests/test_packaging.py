@@ -84,6 +84,28 @@ class TestImportsFromAnyDirectoryName(unittest.TestCase):
         )
         self.assertIn("EVAL", proc.stdout)
 
+    def test_plain_unittest_works_from_a_renamed_checkout(self):
+        """`python -m unittest` is the first thing a reviewer types. It must
+        import the suite without run.py's help, whatever the folder is called."""
+        import shutil
+        import subprocess
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = pathlib.Path(tmp) / "some-other-name"
+            shutil.copytree(
+                PKG, dest,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"),
+            )
+            # Only the engine module, so this check never recurses into itself.
+            proc = subprocess.run(
+                [sys.executable, "-m", "unittest", "tests.test_engine"],
+                cwd=dest, capture_output=True, text=True, timeout=120,
+            )
+        self.assertEqual(proc.returncode, 0, proc.stderr[-1500:])
+        self.assertIn("OK", proc.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

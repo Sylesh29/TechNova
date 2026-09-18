@@ -120,10 +120,15 @@ def labeled_cases() -> tuple[EvalCase, ...]:
 def unlabeled_cases() -> tuple[EvalCase, ...]:
     """A run containing one honest 'I do not know what the right answer is'."""
     return labeled_cases() + (
+        # NPI 1972062586 is in the 2026-07-07 extract. On 2026-09-18 it was
+        # absent from the live LEIE download: reinstated or removed since,
+        # and this extract cannot tell which. The fixture would BLOCK a
+        # payment to it today. That is a real open question, not a staged one.
         EvalCase("OPEN-Q",
-                 "Provider reinstated after exclusion; the extract has no REINDATE, "
-                 "so the correct verdict is genuinely undetermined here",
-                 _a(verb="issue_payment", provider_npi="1073671517", amount_cents=15000,
+                 "Provider present in the extract but no longer on the live LEIE; "
+                 "the extract carries no REINDATE, so the correct verdict is "
+                 "genuinely undetermined here",
+                 _a(verb="issue_payment", provider_npi="1972062586", amount_cents=15000,
                     claim_id="C-14"),
                  None, None),
     )

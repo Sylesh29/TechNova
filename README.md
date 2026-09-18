@@ -12,13 +12,15 @@ that" has an answer that survives an audit.
 python run.py            # a gated agent episode, end to end
 python run.py redteam    # injection red team, reported per category
 python run.py eval       # eval that abstains when it cannot vouch
-python run.py test       # 80 tests
-python run.py all        # all of the above, in order
+python run.py test       # 81 tests
+python run.py report     # rewrite reports/ from the current code
+python run.py all        # demo, redteam, eval, test - in order
 ```
 
 Pure standard library. Python 3.10+. No install, no dependencies, no network.
-`run.py` works from inside this directory; from the repo root,
-`python -m actionguard` and `python -m actionguard.redteam` do the same thing.
+`pytest` and `python -m unittest` (from the checkout) run the same suite; the
+package binds itself as `actionguard` whatever the checkout directory is
+called, so a clone, a fork or a "Download ZIP" all behave the same.
 
 ---
 
@@ -47,10 +49,14 @@ order and yields an invariant that can be executed rather than asserted:
 > **Monotonicity** — for any action, adding a rule can never produce a less
 > restrictive verdict than the same rule set without it.
 
-`Guardrail.check_monotonicity` proves it by brute force: for each action it
+`Guardrail.check_monotonicity` checks it by brute force: for each action it
 compares the full rule set against every subset with up to 3 of the 7 rules
-removed, and fails if a smaller set was ever *more* restrictive. That is what
-"a deterministic override the model cannot argue with" means mechanically.
+removed, and fails if a smaller set was ever *more* restrictive. Taking a max
+over a lattice is monotone by construction, so what the check actually guards
+is the *purity* of the rules — a rule that mutated the context, or read another
+rule's output, could break the property, and this is the test that would catch
+it. That is what "a deterministic override the model cannot argue with" means
+mechanically.
 
 Precedence numbers do not decide the verdict — the lattice does. They decide
 which rule is *named* as controlling when several land on the same verdict, so
@@ -228,7 +234,7 @@ Stated plainly, because a control register without a gaps table is marketing.
 | Gap | Status |
 |---|---|
 | **Exclusion list is a 79-NPI extract** | The bundled fixture is not the full LEIE (~83k records upstream). A negative screen means "not in the extract", not "not excluded". Production needs the monthly full file. |
-| **Reinstatement and waivers not modelled** | Upstream LEIE carries `REINDATE`/`WAIVERDATE`; this fixture does not. A reinstated provider would still screen as excluded. This is the unlabeled eval case. |
+| **Reinstatement and waivers not modelled** | Upstream LEIE carries `REINDATE`/`WAIVERDATE`; this fixture does not. A reinstated provider would still screen as excluded. This is not hypothetical: re-checked against the live LEIE on 2026-09-18, **78 of the 79 NPIs are still listed and one (`1972062586`) is not** — reinstated or removed since the July extract, and the fixture cannot tell which. That NPI is the unlabeled eval case. |
 | **Semantic injection is not detected** | Measured at 0% on the adaptive category. Mitigated structurally, not detected. A capability-scoped agent — where untrusted content cannot reach a tool that moves money at all — is the real fix; this is a boundary, not that. |
 | **Entity resolution is names and NPIs only** | No address, DOB, or corporate-affiliation matching. An excluded individual billing under a new entity's NPI is not caught. |
 | **Fuzzy threshold is unvalidated** | 0.90 on `SequenceMatcher` was chosen, not tuned. No labeled name-matching set exists here, so no precision/recall number is claimed for it. |
@@ -243,7 +249,9 @@ Stated plainly, because a control register without a gaps table is marketing.
 
 `data/leie_extract.json` — 79 NPIs from the HHS-OIG List of Excluded
 Individuals/Entities, captured 2026-07-07, plus **5 clearly-flagged synthetic
-name records** to exercise the fuzzy path. Real LEIE names are deliberately not
+name records** to exercise the fuzzy path. Re-verified against the live
+`UPDATED.csv` download on 2026-09-18: 78 still listed, 1 no longer — which is
+the monthly-refresh point in the gaps table, observed rather than asserted. Real LEIE names are deliberately not
 vendored: publishing invented names alongside real exclusion records would be
 defamatory. Provenance, coverage limits and a SHA-256 of the records ride inside
 the fixture and are echoed into every screening hit and into the demo header.
@@ -264,8 +272,8 @@ redteam.py       26-attack corpus and the two-number report
 evalharness.py   labeled cases and the abstention logic
 demo.py          two gated episodes: a claims queue, and payment posting across sessions
 run.py           entry point that works from inside this directory
-tests/           80 tests, unittest, no dependencies
-reports/         generated output, regenerate with the run.py commands
+tests/           81 tests, unittest, no dependencies
+reports/         generated output; `python run.py report` rewrites it
 ```
 
 `screening.py` has no healthcare in it. It normalises names, builds an exact

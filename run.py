@@ -15,6 +15,7 @@ the path so the package imports the same way from either location.
     python run.py redteam    # injection red team
     python run.py eval       # eval harness, including its abstention
     python run.py test       # the full suite
+    python run.py report     # rewrite reports/ from the current code
     python run.py all        # everything, in order
 """
 from __future__ import annotations
@@ -72,6 +73,34 @@ def _eval() -> int:
     return 0
 
 
+def _report() -> int:
+    """Regenerate reports/ from the current code. What the README quotes."""
+    import json
+    from actionguard import evalharness as ev, redteam
+
+    out = HERE / "reports"
+    out.mkdir(exist_ok=True)
+    rt = redteam.run()
+    vouched = ev.run(ev.labeled_cases())
+    abstained = ev.run(ev.unlabeled_cases())
+    (out / "redteam.json").write_text(json.dumps(rt, indent=2), encoding="utf-8")
+    (out / "eval.json").write_text(json.dumps(vouched, indent=2), encoding="utf-8")
+    (out / "REPORT.md").write_text(
+        "# Measured results\n\n"
+        "Every number below was produced by running the code in this\n"
+        "directory. Regenerate with `python run.py report`.\n\n"
+        "## Red team - indirect prompt injection\n\n"
+        f"```\n{redteam.format_report(rt)}\n```\n\n"
+        "## Eval - policy conformance\n\n"
+        f"```\n{ev.format_report(vouched)}\n```\n\n"
+        "## The same harness, on a suite it cannot vouch for\n\n"
+        f"```\n{ev.format_report(abstained)}\n```\n",
+        encoding="utf-8",
+    )
+    print(f"wrote {out / 'REPORT.md'}, redteam.json, eval.json")
+    return 0
+
+
 def _test() -> int:
     # top_level_dir is HERE, not HERE.parent: tests import `actionguard.*`,
     # which _load_package() has already bound, so discovery must not try to
@@ -83,7 +112,8 @@ def _test() -> int:
     return 0 if result.wasSuccessful() else 1
 
 
-COMMANDS = {"demo": _demo, "redteam": _redteam, "eval": _eval, "test": _test}
+COMMANDS = {"demo": _demo, "redteam": _redteam, "eval": _eval, "test": _test,
+            "report": _report}
 
 
 def main(argv: list[str]) -> int:
